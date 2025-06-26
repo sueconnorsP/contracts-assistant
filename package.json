@@ -5,8 +5,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "build-client": "cd my-chat-ui && npm install && npm run build && cd .. && cp -r my-chat-ui/build ./build",
-    "postinstall": "npm run build-client"
+    "build-client": "cd my-chat-ui && npm install && npm run build && cd .. && cp -r my-chat-ui/build ./build"
   },
   "author": "",
   "license": "ISC",
