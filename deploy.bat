@@ -1,16 +1,28 @@
 @echo off
-echo 💻 Building React frontend...
-cd my-chat-ui
-npm run build
+SETLOCAL
+
+echo 💻 Starting deploy script...
+
+echo.
+echo 📦 Step 1: Building React frontend...
+cd my-chat-ui || exit /b
+call npm run build || (
+  echo ❌ Build failed. Check your code and try again.
+  pause
+  exit /b
+)
 cd..
 
-echo 📁 Copying build folder to root...
+echo.
+echo 📁 Step 2: Copying build folder to server root...
 xcopy /E /I /Y my-chat-ui\build build
 
-echo 📦 Committing changes to GitHub...
+echo.
+echo 🗃️ Step 3: Committing changes to GitHub...
 git add .
 git commit -m "🚀 Deploy updated build"
 git push origin main
 
-echo ✅ Deployment pushed to GitHub.
+echo.
+echo ✅ All done! Changes pushed to GitHub.
 pause
