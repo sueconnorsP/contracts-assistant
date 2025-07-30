@@ -21,6 +21,12 @@ app.use(express.json());
 // OpenAI setup
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
+// Simple function to ensure blank line before Markdown lists for proper rendering
+function normalizeMarkdown(md) {
+  // Inserts a blank line before any line starting with list markers (-, *, +, or numbers)
+  return md.replace(/([^\n])(\n)([-*+] |\d+\.)/g, "$1\n\n$3");
+}
+
 // API route
 app.post("/ask", async (req, res) => {
   const { message } = req.body;
@@ -31,6 +37,7 @@ app.post("/ask", async (req, res) => {
 
   try {
     const thread = await openai.beta.threads.create();
+
     await openai.beta.threads.messages.create(thread.id, {
       role: "user",
       content: message,
@@ -41,12 +48,13 @@ app.post("/ask", async (req, res) => {
     });
 
     const messages = await openai.beta.threads.messages.list(thread.id);
-    const assistantMessage = messages.data.find(
-      (msg) => msg.role === "assistant"
-    );
+    const assistantMessage = messages.data.find((msg) => msg.role === "assistant");
+
+    const rawResponse = assistantMessage?.content[0]?.text?.value || "Hmm, I couldn't find a good answer for that.";
+    const normalizedResponse = normalizeMarkdown(rawResponse); // Normalize Markdown here
 
     res.json({
-      response: assistantMessage?.content[0]?.text?.value || "Hmm, I couldn't find a good answer for that.",
+      response: normalizedResponse,
     });
   } catch (err) {
     console.error("Error during OpenAI call:", err);
