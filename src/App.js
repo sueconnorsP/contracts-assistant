@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import ReactMarkdown from "react-markdown";
+import { EventSourcePolyfill } from "event-source-polyfill";
 import "./App.css";
 
 function App() {
@@ -17,7 +18,7 @@ function App() {
     "Where can I get legal advice on the Builders Lien Act?",
   ];
 
-  const sendMessage = async (text) => {
+  const sendMessage = (text) => {
     const messageText = text || input.trim();
     if (!messageText) return;
 
@@ -26,27 +27,39 @@ function App() {
     setInput("");
     setLoading(true);
 
-    try {
-      const response = await fetch("/ask", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: messageText }),
+    const assistantReply = { sender: "assistant", text: "" };
+    setMessages((prev) => [...prev, assistantReply]);
+
+    const eventSource = new EventSourcePolyfill("/ask-talent", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: messageText }),
+    });
+
+    eventSource.onmessage = (event) => {
+      const chunk = event.data;
+      assistantReply.text += chunk;
+
+      setMessages((prev) => {
+        const updated = [...prev];
+        updated[updated.length - 1] = { ...assistantReply };
+        return updated;
       });
+    };
 
-      const data = await response.json();
-
+    eventSource.onerror = () => {
       setMessages((prev) => [
-        ...prev,
-        { sender: "assistant", text: data.response },
+        ...prev.slice(0, -1),
+        {
+          sender: "assistant",
+          text: "❌ Sorry, something went wrong while streaming the response.",
+        },
       ]);
-    } catch (error) {
-      setMessages((prev) => [
-        ...prev,
-        { sender: "assistant", text: "❌ Sorry, something went wrong while connecting to the server." },
-      ]);
-    } finally {
+      eventSource.close();
       setLoading(false);
-    }
+    };
+
+    eventSource.onopen = () => setLoading(false);
   };
 
   const handleKeyPress = (e) => {
